@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+    <meta name="theme-color" content="#38100d">
+    <title>MAÑANA · 落日沙画画台</title>
+    <link rel="stylesheet" href="./style.css">
+    <script src="./app.js" defer></script>
+  </head>
+  <body class="web-version">
+    <main id="sandApp" class="sand-app">
+      <section id="stage" class="stage" aria-label="数字沙画创作区域">
+        <div id="canvasViewport" class="canvas-viewport">
+          <canvas id="sandCanvas" aria-label="可触摸创作的沙画灯箱"></canvas>
+          <canvas id="guideCanvas" class="guide-canvas" aria-hidden="true"></canvas>
+          <div id="guideFrame" class="guide-frame" aria-hidden="true"></div>
+        </div>
+        <div id="guideAdjustPanel" class="guide-adjust-panel" hidden>
+          <small>单指移动 · 双指缩放与旋转</small>
+          <button id="guideConfirmButton" type="button">确定</button>
+        </div>
+        <header class="topbar">
+          <div class="brand">
+            <span class="brand-dot" aria-hidden="true"></span>
+            <b>MAÑANA</b>
+            <small>落日沙画画台</small>
+          </div>
+          <span class="version">落日明日 · 主题版 1.0</span>
+        </header>
+
+        <section id="welcome" class="welcome" aria-hidden="true">
+          <span>01 / A LITTLE SUNSET</span>
+          <h1>留住落日，<br>画下明天。</h1>
+          <p>通过下方画笔大小滑块控制笔触范围。<br>落砂叠出橙红，透光擦出金色，画下你的落日。</p>
+          <i>触摸屏幕或移动光标开始</i>
+        </section>
+
+        <button id="drawerToggleButton" class="drawer-toggle" type="button" aria-controls="toolDock" aria-expanded="false" aria-label="打开创作工具，可上下拖动">
+          <span aria-hidden="true">☰</span><b>工具</b>
+        </button>
+        <button id="drawerScrim" class="drawer-scrim" type="button" aria-label="关闭工具抽屉"></button>
+
+        <section id="toolDock" class="tool-dock" aria-label="图片与线稿工具">
+          <div class="drawer-head">
+            <div><b>工具</b><small>右滑收起工具</small></div>
+          </div>
+          <input id="sandImageInput" class="file-input" type="file" accept="image/*">
+          <button id="generateButton" class="dock-main" type="button">
+            <span>✦</span><b>自动生成沙画</b><small>上传图片</small>
+          </button>
+
+          <input id="guideImageInput" class="file-input" type="file" accept="image/*">
+          <button id="guideButton" class="dock-main" type="button">
+            <span>⌁</span><b>线稿辅助</b><small id="guideButtonHint">上传临摹图片</small>
+          </button>
+
+          <button id="landscapeButton" class="dock-main" type="button">
+            <span>↔</span><b>横版</b><small>旋转手机使用横版</small>
+          </button>
+
+          <div id="guideControls" class="guide-controls" hidden>
+            <div class="control-row">
+              <button id="guideToggleButton" type="button">隐藏辅助线</button>
+              <button id="guideAdjustButton" type="button">调整参考线</button>
+            </div>
+            <small>点击“调整参考线”后，工具栏会自动收起</small>
+          </div>
+
+          <section class="native-actions" aria-label="保存与发布作品">
+            <button id="saveImageButton" type="button"><span>↓</span><b>下载作品</b></button>
+            <button id="postNoteButton" type="button"><span>↗</span><b>分享作品</b></button>
+            <small>下载与分享的作品不会包含辅助线</small>
+          </section>
+
+          <section class="project-actions" aria-label="本机工程存档">
+            <div class="project-title"><b>我的工程</b><span id="projectStatus">0 个工程</span></div>
+            <div class="project-buttons">
+              <button id="saveProjectButton" type="button"><span>◇</span><b>保存当前</b></button>
+              <button id="saveNewProjectButton" type="button"><span>＋</span><b>另存为新</b></button>
+            </div>
+            <div id="projectGallery" class="project-gallery" aria-label="已保存的工程文件"></div>
+            <small>点击缩略图继续画画；最多保存 8 个本机工程。缓存可能被系统清理，不会同步到其他设备</small>
+          </section>
+        </section>
+
+        <p id="status" class="status" role="status" aria-live="polite">调整画笔大小，触摸屏幕或移动光标开始</p>
+      </section>
+
+      <nav class="toolbar" aria-label="沙画快捷操作栏">
+        <button class="tool-button active" type="button" data-tool="sand" aria-label="落砂">
+          <svg class="toolbar-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="6" r="1.2"></circle><circle cx="12" cy="9" r="1.2"></circle><circle cx="17" cy="6" r="1.2"></circle><path d="M5 14c2.2-1.5 4.5-1.5 7 0s4.8 1.5 7 0M5 18c2.2-1.5 4.5-1.5 7 0s4.8 1.5 7 0"></path></svg>
+          <em>落砂</em>
+        </button>
+        <button class="tool-button" type="button" data-tool="shape" aria-label="塑形">
+          <svg class="toolbar-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8c2.5-2 5-2 8 0s5.5 2 8 0M4 12c2.5-2 5-2 8 0s5.5 2 8 0M4 16c2.5-2 5-2 8 0s5.5 2 8 0"></path></svg>
+          <em>塑形</em>
+        </button>
+        <button class="tool-button" type="button" data-tool="light" aria-label="透光">
+          <svg class="toolbar-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"></circle><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"></path></svg>
+          <em>透光</em>
+        </button>
+        <button id="canvasLockButton" class="canvas-lock-button" type="button" aria-pressed="true" aria-label="画台已锁定，点击解锁移动和缩放">
+          <svg class="lock-glyph" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 10V7a5 5 0 0 1 10 0v3"></path>
+            <rect x="4" y="10" width="16" height="11" rx="3"></rect>
+            <circle cx="12" cy="15.5" r="1.3"></circle>
+          </svg>
+          <em>画台锁定</em>
+        </button>
+        <span class="divider" aria-hidden="true"></span>
+        <button id="pauseButton" type="button" aria-label="暂停创作">
+          <svg class="toolbar-icon pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path class="pause-bars" d="M8 6v12M16 6v12"></path><path class="play-mark" d="m9 6 9 6-9 6Z"></path></svg>
+          <em>暂停</em>
+        </button>
+        <button id="undoButton" type="button" aria-label="撤回上一步">
+          <svg class="toolbar-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 7-5 5 5 5M5 12h8a6 6 0 0 1 6 6"></path></svg>
+          <em>撤回</em>
+        </button>
+        <button id="redoButton" type="button" aria-label="取消撤回">
+          <svg class="toolbar-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5M19 12h-8a6 6 0 0 0-6 6"></path></svg>
+          <em>取消撤回</em>
+        </button>
+        <button id="clearButton" type="button" aria-label="清空画台">
+          <svg class="toolbar-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"></path></svg>
+          <em>清空</em>
+        </button>
+        <label class="brush-control"><em>画笔</em>
+          <input id="brushSizeInput" aria-label="画笔大小" type="range" min="8" max="200" value="48">
+          <output id="brushSizeOutput">48</output>
+        </label>
+      </nav>
+    </main>
+  </body>
+</html>

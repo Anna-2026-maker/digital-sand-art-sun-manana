@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+.DS_Store
+*.pem
+*.log
+.vercel/
+.wrangler/
+.sites-runtime/
+.openai/

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#fff7f7">
+  <title>表情包制作台 · 小红书版 v1.7.0</title>
+  <link rel="stylesheet" href="./style.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+<main id="memeApp" class="app">
+  <div class="xhs-safe-zone" aria-hidden="true"></div>
+  <section class="intro">
+    <div class="brand-mark"><svg viewBox="0 0 24 24"><path d="M7 8.5h.01M17 8.5h.01M8 14c1.1 1.2 2.4 1.8 4 1.8s2.9-.6 4-1.8"/><circle cx="12" cy="12" r="9"/></svg></div>
+    <div><b>表情包制作台</b><small>把照片和视频变成你的表情</small></div>
+  </section>
+
+  <section class="workspace">
+    <div id="stage" class="stage" aria-label="表情包编辑画布">
+      <div id="artboard" class="artboard" aria-label="自由作品工作台">
+        <canvas id="canvas" width="900" height="1200"></canvas>
+        <canvas id="guideCanvas" width="900" height="1200" aria-hidden="true"></canvas>
+      </div>
+      <div id="cropFrame" class="crop-frame" hidden><i></i><i></i><i></i><i></i></div>
+      <div id="gestureHint" class="gesture-hint" hidden>单指移动 · 双指等比例缩放</div>
+      <div id="emptyState" class="empty-state">
+        <button id="chooseButton" class="add-media" type="button" aria-label="添加图片或短视频">＋</button>
+        <strong>添加图片或短视频</strong>
+        <p>支持相册视频 / HEVC · 建议 80MB 内<br>视频导入后先截取最长 10 秒</p>
+      </div>
+      <div id="uploadOverlay" class="upload-overlay" hidden>
+        <div class="upload-card">
+          <div class="upload-icon">↥</div>
+          <strong id="uploadTitle">正在上传到编辑台</strong>
+          <span id="uploadDetail">正在读取视频…</span>
+          <div class="upload-progress"><i id="uploadProgress"></i></div>
+          <b id="uploadPercent">0%</b>
+        </div>
+      </div>
+      <div class="canvas-history"><button id="undoButton" class="history-circle" type="button" aria-label="撤回">↶</button><button id="redoButton" class="history-circle" type="button" aria-label="重做">↷</button></div>
+    </div>
+    <input id="fileInput" class="file-input" type="file" accept="image/*,video/*,.mov,.mp4,.m4v,.webm,.hevc,.h265,.3gp,.3g2,.avi,.mkv">
+    <input id="stickerInput" class="file-input" type="file" accept="image/png,image/gif,image/webp">
+    <video id="sourceVideo" class="source-video" muted playsinline webkit-playsinline preload="metadata"></video>
+    <div class="media-status"><span id="mediaInfo">还没有导入素材</span><span id="mediaMode">静态表情</span></div>
+  </section>
+
+  <section id="panel" class="panel" aria-live="polite"></section>
+
+  <nav class="toolbar" aria-label="编辑工具">
+    <button class="tool" type="button" data-tool="crop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v14a2 2 0 0 0 2 2h12M3 7h14a2 2 0 0 1 2 2v12"/></svg><em>裁剪</em></button>
+    <button class="tool" type="button" data-tool="cutout"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7.5c2.2-3 7.8-4 11-.8 2.7 2.7 1.6 7.2-.7 9.3-2.5 2.2-7.9 2.4-10.5-.5-2.1-2.3-2-5.6.2-8Z"/><path d="M3 4v4M3 4h4M21 20v-4M21 20h-4"/></svg><em>抠图</em></button>
+    <button class="tool" type="button" data-tool="text"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14M12 5v14M8 19h8"/></svg><em>文字</em></button>
+    <button class="tool" type="button" data-tool="sticker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v7l-5 5H7a2 2 0 0 1-2-2V4Z"/><path d="M14 19v-4a1 1 0 0 1 1-1h4"/><path d="m8 10 2 2 4-4"/></svg><em>贴纸</em></button>
+    <button class="tool" type="button" data-tool="draw"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 19 3.6-.8L19 7.8 16.2 5 5.8 15.4 5 19Z"/><path d="m14.8 6.4 2.8 2.8"/></svg><em>涂鸦</em></button>
+    <button class="tool" type="button" data-tool="adjust"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M4 12h16"/><circle cx="9" cy="7" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="11" cy="17" r="2"/></svg><em>调色</em></button>
+    <button class="tool" type="button" data-tool="motion"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 7 8 5-8 5V7Z"/><path d="M4 5v14"/></svg><em>动图</em></button>
+  </nav>
+
+  <footer class="actions">
+    <div class="edit-actions">
+      <button id="replaceButton" class="round-action text-action" type="button">换素材</button>
+    </div>
+    <div class="main-actions">
+      <button id="saveButton" class="primary-button" type="button">保存到手机相册</button>
+      <button id="shareButton" class="secondary-button share-button" type="button" open-type="share" data-share-type="normal">发送给好友</button>
+    </div>
+  </footer>
+  <p id="status" class="status" role="status">所有编辑都在本机完成</p>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</main>
+</body>
+</html>
