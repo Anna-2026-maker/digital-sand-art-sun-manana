@@ -187,11 +187,18 @@ img { -webkit-user-drag: none; user-drag: none; }
   position: absolute;
   z-index: 7;
   top: 50%;
-  right: 22px;
-  width: 150px;
+  right: max(16px, var(--safe-area-inset-right, env(safe-area-inset-right, 0px)));
+  width: min(280px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
   transform: translateY(-50%);
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
   gap: 7px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
 }
 .drawer-toggle, .drawer-scrim, .drawer-head { display: none; }
 .file-input { position: fixed; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
@@ -501,6 +508,7 @@ img { -webkit-user-drag: none; user-drag: none; }
     right: 0;
     bottom: 0;
     width: min(82vw, 300px);
+    max-height: none;
     padding: max(14px, var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) 12px max(14px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
     transform: translateX(105%);
     align-content: start;
@@ -687,9 +695,10 @@ img { -webkit-user-drag: none; user-drag: none; }
 .brand-dot { background: #ff9f23; box-shadow: 0 0 18px rgba(255, 119, 25, .4); }
 
 /* Optional microphone controls. Hidden until the user grants permission. */
-.wind-settings { display:grid; gap:10px; padding:12px; color:var(--ink); border:1px solid #b77942; border-radius:10px; background:#ffe7b4; }
-.wind-settings label { display:flex; align-items:center; gap:8px; font-size:12px; }
-.wind-settings input { min-width:0; flex:1; accent-color:#cf5220; }
+.wind-settings { min-width:0; display:grid; gap:10px; padding:12px; color:var(--ink); border:1px solid #b77942; border-radius:10px; background:#ffe7b4; }
+.wind-settings label { min-width:0; display:grid; grid-template-columns:minmax(0, 1fr) auto; align-items:center; gap:6px 8px; font-size:12px; }
+.wind-settings label output { justify-self:end; }
+.wind-settings input { grid-column:1 / -1; min-width:0; width:100%; accent-color:#cf5220; }
 .wind-settings small { font-size:11px; line-height:1.5; }
 .wind-settings button, .wind-live button { min-height:44px; border:1px solid #a14a29; border-radius:12px; background:#6b2419; color:#fff0ce; padding:8px 14px; }
 .wind-nozzle { position:absolute; z-index:4; width:58px; height:58px; border:1px dashed #82351f; border-radius:50%; background:#fff0c9d9; color:#722717; transform:translate(-50%,-50%); touch-action:none; cursor:move; }

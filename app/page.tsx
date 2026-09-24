@@ -389,7 +389,7 @@ export default function Home() {
         <div>
           <span className="brand-dot" />
           <b>MAÑANA</b>
-          <small>落日沙画画台</small>
+          <small>日出沙画画台</small>
         </div>
         <p>{hint}</p>
       </header>

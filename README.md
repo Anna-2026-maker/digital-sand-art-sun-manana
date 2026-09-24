@@ -1,6 +1,6 @@
-# MAÑANA · 落日沙画画台
+# MAÑANA · 日出沙画画台
 
-为落日明日 mañana 主题活动制作的独立沙画项目。复制自 [digital-sand-art](https://github.com/Anna-2026-maker/digital-sand-art)，基于源提交 `d8b0c23cb87d2bc9ed6a918e6aea6aa2a1d7ab8e`，原仓库不受本项目修改影响。
+为日出明日 mañana 主题活动制作的独立沙画项目。复制自 [digital-sand-art](https://github.com/Anna-2026-maker/digital-sand-art)，基于源提交 `d8b0c23cb87d2bc9ed6a918e6aea6aa2a1d7ab8e`，原仓库不受本项目修改影响。
 
 ## 主题效果
 
