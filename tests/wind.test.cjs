@@ -76,3 +76,30 @@ test('pause and pointer cancellation stop movement', async () => {
   f.state.paused = true; const before = f.state.field.slice(); f.tick(5); assert.deepEqual(f.state.field, before);
   f.state.paused = false; await f.nodes.windHold.fire('pointerdown'); await f.nodes.windHold.fire('pointercancel'); f.tick(10); assert.deepEqual(f.state.field, before);
 });
+
+test('a quiet breath makes a strong fan gust at high sensitivity', async () => {
+  async function trial(sensitivity, amplitude) {
+    const f = fixture();
+    f.nodes.windSensitivity.value = sensitivity;
+    await f.nodes.windToggle.fire('click');
+    f.tick(35);
+    await f.nodes.windHold.fire('pointerdown', { pointerId: 1 });
+    const before = f.state.field.slice();
+    f.sound(amplitude);
+    f.tick(12);
+    const displacement = f.state.field.reduce((total, value, i) => total + Math.abs(value - before[i]), 0);
+    return { displacement, f };
+  }
+  const lowQuiet = await trial(1, .013);
+  const highQuiet = await trial(100, .013);
+  assert.equal(lowQuiet.displacement, 0, 'quiet breath stays below low-sensitivity threshold');
+  assert.ok(highQuiet.displacement > 5, 'quiet breath has visible effect at high sensitivity');
+
+  const lowStrong = await trial(1, .05);
+  const highStrong = await trial(100, .05);
+  assert.ok(highStrong.displacement > lowStrong.displacement * 2,
+    'slider makes the same breath more than twice as effective');
+  assert.equal(highStrong.f.stats().snapshots, 1);
+  assert.ok(Math.abs(sum(highStrong.f.state.field) - sum(highStrong.f.history[0])) < .001,
+    'the gust redistributes sand without creating or deleting it');
+});

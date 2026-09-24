@@ -7,7 +7,7 @@
     <title>MAÑANA · 落日沙画画台</title>
     <link rel="stylesheet" href="./style.css?v=3">
     <script src="./sunset-colors.js?v=2" defer></script>
-    <script src="./wind.js?v=2" defer></script>
+    <script src="./wind.js?v=3" defer></script>
     <script src="./app.js?v=3" defer></script>
   </head>
   <body class="web-version">
@@ -29,7 +29,7 @@
             <b>MAÑANA</b>
             <small>落日沙画画台</small>
           </div>
-          <span class="version">落日明日 · 主题版 1.2</span>
+          <span class="version">落日明日 · 主题版 1.3</span>
         </header>
 
         <section id="welcome" class="welcome" aria-hidden="true">
@@ -72,9 +72,9 @@
 
           <section id="windSettings" class="wind-settings" aria-label="吹沙设置">
             <button id="windToggle" type="button" aria-pressed="false">开启麦克风吹沙</button>
-            <label>灵敏度<input id="windSensitivity" type="range" min="1" max="100" value="60"></label>
+            <label>灵敏度 · 风力 <output id="windSensitivityValue">60%</output><input id="windSensitivity" type="range" min="1" max="100" value="60"></label>
             <label>风向 <output id="windDirectionValue">0°</output><input id="windDirection" type="range" min="0" max="360" step="15" value="0"></label>
-            <small>0°向右，90°向下；画笔大小控制风幅。声音仅在本机分析，不录音、不上传。现场嘈杂时请降低灵敏度。</small>
+            <small>滑块调高后，轻吹也能带动更大范围的沙子。0°向右，90°向下；画笔大小也控制风幅。声音只在本机分析。</small>
           </section>
           <section class="native-actions" aria-label="保存与发布作品">
             <button id="saveImageButton" type="button"><span>↓</span><b>下载作品</b></button>

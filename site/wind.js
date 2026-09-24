@@ -6,12 +6,22 @@
     source.set(field);
     const dx = Math.cos(angle), dy = Math.sin(angle);
     const reach = radius * 2.5;
-    const step = 1 + power * 3;
+    const step = 1 + power * 4.5;
     const sx = Math.round(dx * step), sy = Math.round(dy * step);
     let moved = 0;
-    const rate = Math.min(.3, dt / 1000 * (1 + power * 6));
-    for (let y = Math.max(0, Math.floor(cy - reach)); y <= Math.min(rows - 1, Math.ceil(cy + reach)); y++) {
-      for (let x = Math.max(0, Math.floor(cx - reach)); x <= Math.min(cols - 1, Math.ceil(cx + reach)); x++) {
+    const rate = Math.min(.72, dt / 1000 * (1 + power * 9));
+    // Scan the rotated fan's bounding box instead of a large square around it.
+    let minX = cols - 1, maxX = 0, minY = rows - 1, maxY = 0;
+    for (const along of [-radius * .2, reach]) {
+      for (const across of [-radius, radius]) {
+        const x = cx + along * dx - across * dy;
+        const y = cy + along * dy + across * dx;
+        minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+      }
+    }
+    for (let y = Math.max(0, Math.floor(minY)); y <= Math.min(rows - 1, Math.ceil(maxY)); y++) {
+      for (let x = Math.max(0, Math.floor(minX)); x <= Math.min(cols - 1, Math.ceil(maxX)); x++) {
         const rx = x - cx, ry = y - cy;
         const along = rx * dx + ry * dy, across = -rx * dy + ry * dx;
         if (along < -radius * .2 || along > reach) continue;
@@ -30,18 +40,31 @@
     return moved;
   }
 
+  // The slider controls the audible threshold AND the size and strength of the gust.
+  function response(rms, floor, sensitivity) {
+    const level = Math.max(0, Math.min(1, (sensitivity - 1) / 99));
+    const threshold = Math.max(.004, floor * (2.7 - 1.55 * level) + (1 - level) * .006);
+    const signal = Math.max(0, (rms - threshold) / Math.max(.004, threshold * (1.6 - 1.1 * level)));
+    return {
+      signal: Math.min(1, signal),
+      radiusFactor: .75 + 1.5 * level * level,
+      strengthFactor: .45 + 2.4 * level * level
+    };
+  }
+
   function attach(api) {
     const get = id => document.getElementById(id);
     const toggle = get('windToggle'), hold = get('windHold'), stop = get('windStop');
     const dock = get('windLive'), nozzle = get('windNozzle'), meter = get('windMeter');
     const message = get('windMessage'), sensitivity = get('windSensitivity'), direction = get('windDirection');
+    const sensitivityValue = get('windSensitivityValue');
     let stream = null, context = null, analyser = null, input = null, samples = null;
     let enabled = false, pending = false, generation = 0, held = false, captured = false;
-    let floor = .006, smooth = 0, sustained = 0, calibratedAt = 0;
+    let floor = .006, smooth = 0, sustained = 0, calibratedAt = 0, lastTransportAt = 0;
     let pos = { x: .5, y: .55 }, drag = null, source = new Float32Array(0);
 
     function release() {
-      held = false; captured = false; sustained = 0; smooth = 0;
+      held = false; captured = false; sustained = 0; smooth = 0; lastTransportAt = 0;
       hold.classList.remove('blowing'); hold.setAttribute('aria-pressed', 'false');
       meter.value = 0;
     }
@@ -112,6 +135,7 @@
     window.addEventListener('pagehide', shutdown);
     window.addEventListener('blur', release);
     direction.addEventListener('input', position);
+    sensitivity.addEventListener('input', () => { sensitivityValue.textContent = sensitivity.value + '%'; });
     get('windSettings').addEventListener('pointerdown', event => event.stopPropagation());
     nozzle.addEventListener('pointerdown', event => {
       event.preventDefault(); event.stopPropagation(); release();
@@ -136,25 +160,30 @@
       let energy = 0;
       for (let i = 0; i < samples.length; i++) {
         energy += samples[i] * samples[i];
-
       }
       const rms = Math.sqrt(energy / samples.length);
-      if (!held) floor = floor * .96 + Math.min(.12, rms) * .04;
+      if (!held) floor = Math.max(.006, floor * .96 + Math.min(.12, rms) * .04);
       if (now < calibratedAt) return;
       if (!held || api.state.paused) { release(); message.textContent = api.state.paused ? '已暂停创作' : '拖动风口 · 按住下方按钮并吹气'; return; }
-      const threshold = Math.max(.004, floor * (2.4 - Number(sensitivity.value) * .012) + (100 - Number(sensitivity.value)) * .00006);
-      // Require a sustained rise above room noise while held; microphone frequency responses vary.
-      const candidate = rms > threshold;
+      const settings = response(rms, floor, Number(sensitivity.value));
+      // The user must hold the button and produce sustained sound above room noise.
+      const candidate = settings.signal > 0;
       sustained = candidate ? sustained + Math.min(dt, 50) : 0;
-      const target = sustained > 100 ? Math.min(1, (rms - threshold) / Math.max(.025, threshold * 2)) : 0;
-      smooth = smooth * .6 + target * .4; meter.value = smooth;
+      const target = sustained > 80 ? settings.signal : 0;
+      smooth = smooth * .55 + target * .45;
+      const gust = Math.min(2.8, smooth * settings.strengthFactor);
+      meter.value = gust / 2.8;
       if (smooth < .025) return;
+      if (lastTransportAt && now - lastTransportAt < 80) return;
       const s = api.state;
       if (!captured) { api.snapshot(); captured = true; api.started(); }
       if (source.length !== s.field.length) source = new Float32Array(s.field.length);
-      transport(s.field, s.cols, s.rows, pos.x * (s.cols - 1), pos.y * (s.rows - 1), Number(direction.value) * Math.PI / 180, Math.max(8, s.size * 2) * s.cols / s.width, smooth, Math.min(dt, 40), source);
+      const radius = Math.min(145, Math.max(8, s.size * 2) * settings.radiusFactor) * s.cols / s.width;
+      const elapsed = lastTransportAt ? Math.min(80, now - lastTransportAt) : Math.max(40, dt);
+      lastTransportAt = now;
+      transport(s.field, s.cols, s.rows, pos.x * (s.cols - 1), pos.y * (s.rows - 1), Number(direction.value) * Math.PI / 180, radius, gust, elapsed, source);
     }
     return { tick, release, busy: () => held || drag !== null };
   }
-  root.MananaWind = { transport, attach };
+  root.MananaWind = { transport, response, attach };
 }(typeof window === 'undefined' ? globalThis : window));
