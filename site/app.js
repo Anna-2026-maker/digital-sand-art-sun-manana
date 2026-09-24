@@ -844,6 +844,7 @@
         stamp(pointer.x, pointer.y, pointer.radius, -delta * 0.00045);
       }
     });
+    wind.tick(delta, now);
     render();
     requestAnimationFrame(frame);
   }
@@ -874,6 +875,7 @@
   }
 
   function beginSandPointer(event) {
+    if (wind.busy()) return;
     if (!state.viewLocked) {
       beginCanvasNavigation(event);
       return;
@@ -890,6 +892,7 @@
   }
 
   function moveSandPointer(event) {
+    if (wind.busy()) return;
     if (!state.viewLocked) {
       moveCanvasNavigation(event);
       return;
@@ -950,6 +953,7 @@
   }
 
   function undo() {
+    wind.release();
     const previous = state.history.pop();
     if (!previous || previous.length !== state.field.length) return;
     state.future.push(state.field.slice());
@@ -959,6 +963,7 @@
   }
 
   function redo() {
+    wind.release();
     const next = state.future.pop();
     if (!next || next.length !== state.field.length) return;
     state.history.push(state.field.slice());
@@ -969,6 +974,7 @@
   }
 
   function clearSand() {
+    wind.release();
     snapshot();
     state.field.fill(0);
     state.started = false;
@@ -1359,6 +1365,7 @@
     setStatus("画笔大小已调整为 " + state.size);
   });
   pauseButton.addEventListener("click", function () {
+    wind.release();
     state.paused = !state.paused;
     pauseButton.classList.toggle("active", state.paused);
     pauseButton.querySelector("em").textContent = state.paused ? "恢复" : "暂停";
@@ -1460,6 +1467,7 @@
   document.addEventListener("visibilitychange", function () {
     if (!document.hidden) scheduleCanvasSetup();
   });
+  const wind = window.MananaWind.attach({ state, snapshot, localPoint, status: setStatus, started: markStarted, closeDrawer });
   syncLandscapeMode();
   setupCanvas();
   syncProjectUi();

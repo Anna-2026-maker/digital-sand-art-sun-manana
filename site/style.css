@@ -685,3 +685,21 @@ img { -webkit-user-drag: none; user-drag: none; }
 .toolbar button:active, .toolbar button.active { background: #75301c; color: #ffd582; }
 .brush-control input { accent-color: #ff9d32; }
 .brand-dot { background: #ff9f23; box-shadow: 0 0 18px rgba(255, 119, 25, .4); }
+
+/* Optional microphone controls. Hidden until the user grants permission. */
+.wind-settings { display:grid; gap:10px; padding:12px; color:var(--ink); border:1px solid #b77942; border-radius:10px; background:#ffe7b4; }
+.wind-settings label { display:flex; align-items:center; gap:8px; font-size:12px; }
+.wind-settings input { min-width:0; flex:1; accent-color:#cf5220; }
+.wind-settings small { font-size:11px; line-height:1.5; }
+.wind-settings button, .wind-live button { min-height:44px; border:1px solid #a14a29; border-radius:12px; background:#6b2419; color:#fff0ce; padding:8px 14px; }
+.wind-nozzle { position:absolute; z-index:4; width:58px; height:58px; border:1px dashed #82351f; border-radius:50%; background:#fff0c9d9; color:#722717; transform:translate(-50%,-50%); touch-action:none; cursor:move; }
+.wind-nozzle span { display:block; font-size:25px; line-height:28px; }
+.wind-nozzle small { font-size:10px; }
+.wind-live { position:absolute; z-index:6; left:50%; bottom:50px; transform:translateX(-50%); width:max-content; max-width:calc(100% - 24px); padding:10px 12px; border-radius:16px; background:#fff0d2ed; color:#702615; box-shadow:0 3px 18px #69251530; }
+.wind-live>small { display:block; font-size:11px; text-align:center; margin-bottom:7px; }
+.wind-live>div { display:flex; align-items:center; justify-content:center; gap:8px; }
+.wind-live meter { width:50px; height:14px; }
+#windHold { touch-action:none; min-width:112px; }
+#windHold.blowing { background:#c44b1c; box-shadow:0 0 0 3px #ffad4566; }
+.wind-live[hidden],.wind-nozzle[hidden] { display:none!important; }
+.drawer-open .wind-live { visibility:hidden; }

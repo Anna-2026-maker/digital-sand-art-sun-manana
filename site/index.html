@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="theme-color" content="#38100d">
     <title>MAÑANA · 落日沙画画台</title>
-    <link rel="stylesheet" href="./style.css">
-    <script src="./app.js" defer></script>
+    <link rel="stylesheet" href="./style.css?v=2">
+    <script src="./wind.js?v=1" defer></script>
+    <script src="./app.js?v=2" defer></script>
   </head>
   <body class="web-version">
     <main id="sandApp" class="sand-app">
@@ -14,6 +15,7 @@
         <div id="canvasViewport" class="canvas-viewport">
           <canvas id="sandCanvas" aria-label="可触摸创作的沙画灯箱"></canvas>
           <canvas id="guideCanvas" class="guide-canvas" aria-hidden="true"></canvas>
+          <button id="windNozzle" class="wind-nozzle" type="button" hidden aria-label="风口：拖动改变位置，方向键微调"><span>➜</span><small>风口</small></button>
           <div id="guideFrame" class="guide-frame" aria-hidden="true"></div>
         </div>
         <div id="guideAdjustPanel" class="guide-adjust-panel" hidden>
@@ -26,7 +28,7 @@
             <b>MAÑANA</b>
             <small>落日沙画画台</small>
           </div>
-          <span class="version">落日明日 · 主题版 1.0</span>
+          <span class="version">落日明日 · 主题版 1.1</span>
         </header>
 
         <section id="welcome" class="welcome" aria-hidden="true">
@@ -67,6 +69,12 @@
             <small>点击“调整参考线”后，工具栏会自动收起</small>
           </div>
 
+          <section id="windSettings" class="wind-settings" aria-label="吹沙设置">
+            <button id="windToggle" type="button" aria-pressed="false">开启麦克风吹沙</button>
+            <label>灵敏度<input id="windSensitivity" type="range" min="1" max="100" value="60"></label>
+            <label>风向 <output id="windDirectionValue">0°</output><input id="windDirection" type="range" min="0" max="360" step="15" value="0"></label>
+            <small>0°向右，90°向下；画笔大小控制风幅。声音仅在本机分析，不录音、不上传。现场嘈杂时请降低灵敏度。</small>
+          </section>
           <section class="native-actions" aria-label="保存与发布作品">
             <button id="saveImageButton" type="button"><span>↓</span><b>下载作品</b></button>
             <button id="postNoteButton" type="button"><span>↗</span><b>分享作品</b></button>
@@ -84,6 +92,10 @@
           </section>
         </section>
 
+        <section id="windLive" class="wind-live" hidden aria-label="麦克风吹沙">
+          <small id="windMessage" role="status">按住按钮并吹气</small>
+          <div><button id="windHold" type="button" aria-pressed="false">按住吹沙</button><meter id="windMeter" min="0" max="1" value="0" aria-label="吹气强度"></meter><button id="windStop" type="button" aria-label="关闭麦克风">关闭</button></div>
+        </section>
         <p id="status" class="status" role="status" aria-live="polite">调整画笔大小，触摸屏幕或移动光标开始</p>
       </section>
 
