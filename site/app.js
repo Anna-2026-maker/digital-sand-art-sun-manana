@@ -41,6 +41,7 @@
   const projectGallery = document.getElementById("projectGallery");
   const projectStatus = document.getElementById("projectStatus");
   const landscapeButton = document.getElementById("landscapeButton");
+  const windQuickButton = document.getElementById("windQuickButton");
 
   const state = {
     tool: "sand",
@@ -774,24 +775,7 @@
   }
 
 
-  // Density-to-colour lookup: warm light, gold, orange, vermilion, wine shadow.
-  // Precomputed once; the drawing simulation and sparse-grain mask stay unchanged.
-  const sunsetStops = [
-    [0, 255, 235, 190], [0.15, 255, 211, 111],
-    [0.34, 255, 179, 44], [0.55, 255, 123, 22],
-    [0.73, 234, 70, 20], [0.87, 175, 38, 17],
-    [1, 77, 13, 12]
-  ];
-  const sunsetColors = new Uint8Array(4096 * 3);
-  for (let sample = 0, stop = 0; sample < 4096; sample += 1) {
-    const density = sample / 4095;
-    while (stop < sunsetStops.length - 2 && density > sunsetStops[stop + 1][0]) stop += 1;
-    const a = sunsetStops[stop], b = sunsetStops[stop + 1];
-    const t = (density - a[0]) / (b[0] - a[0]);
-    for (let channel = 1; channel <= 3; channel += 1) {
-      sunsetColors[sample * 3 + channel - 1] = Math.round(a[channel] + (b[channel] - a[channel]) * t);
-    }
-  }
+  const sunsetColors = window.MananaColor.palette;
 
   function render() {
     const data = state.image.data;
@@ -1010,11 +994,7 @@
       const sourceContext = source.getContext("2d", { willReadFrequently: true });
       drawBitmapContained(sourceContext, bitmap, state.cols, state.rows);
       const pixels = sourceContext.getImageData(0, 0, state.cols, state.rows).data;
-      for (let index = 0; index < state.field.length; index += 1) {
-        const pixel = index * 4;
-        const luminance = (pixels[pixel] * 0.299 + pixels[pixel + 1] * 0.587 + pixels[pixel + 2] * 0.114) / 255;
-        state.field[index] = Math.min(1.38, Math.pow(1 - luminance, 1.25) * 1.28);
-      }
+      window.MananaColor.photoToField(pixels, state.cols, state.rows, state.field);
       bitmap.close();
       markStarted();
       setTool("shape");
@@ -1375,6 +1355,7 @@
   redoButton.addEventListener("click", redo);
   clearButton.addEventListener("click", clearSand);
   canvasLockButton.addEventListener("click", function () { setCanvasLocked(!state.viewLocked); });
+  windQuickButton.addEventListener("click", function () { openDrawer(); document.getElementById("windSettings").scrollIntoView({ block: "center", behavior: "smooth" }); });
 
   generateButton.addEventListener("click", function () { sandImageInput.click(); });
   sandImageInput.addEventListener("change", function () { generateSandFromFile(sandImageInput.files && sandImageInput.files[0]); });

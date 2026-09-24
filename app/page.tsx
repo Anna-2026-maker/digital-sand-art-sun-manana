@@ -4,10 +4,10 @@ import { useEffect, useRef, useState } from "react";
   // Density-to-colour lookup: warm light, gold, orange, vermilion, wine shadow.
   // Precomputed once; the drawing simulation and sparse-grain mask stay unchanged.
   const sunsetStops = [
-    [0, 255, 235, 190], [0.15, 255, 211, 111],
-    [0.34, 255, 179, 44], [0.55, 255, 123, 22],
-    [0.73, 234, 70, 20], [0.87, 175, 38, 17],
-    [1, 77, 13, 12]
+    [0, 255, 238, 197], [0.15, 255, 217, 117],
+    [0.34, 255, 185, 76], [0.55, 255, 142, 59],
+    [0.73, 237, 99, 57], [0.87, 174, 81, 58],
+    [1, 95, 52, 37]
   ];
   const sunsetColors = new Uint8Array(4096 * 3);
   for (let sample = 0, stop = 0; sample < 4096; sample += 1) {

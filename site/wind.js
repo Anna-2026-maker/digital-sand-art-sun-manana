@@ -37,7 +37,7 @@
     const message = get('windMessage'), sensitivity = get('windSensitivity'), direction = get('windDirection');
     let stream = null, context = null, analyser = null, input = null, samples = null;
     let enabled = false, pending = false, generation = 0, held = false, captured = false;
-    let floor = .008, smooth = 0, sustained = 0, calibratedAt = 0;
+    let floor = .006, smooth = 0, sustained = 0, calibratedAt = 0;
     let pos = { x: .5, y: .55 }, drag = null, source = new Float32Array(0);
 
     function release() {
@@ -76,10 +76,12 @@
         stream = acquired; input = context.createMediaStreamSource(stream);
         analyser = context.createAnalyser(); analyser.fftSize = 2048;
         input.connect(analyser); samples = new Float32Array(analyser.fftSize);
+        // iPad Safari may suspend the context while the system permission sheet is open.
+        context.resume().catch(() => {});
         stream.getTracks().forEach(t => t.addEventListener('ended', shutdown));
         pending = false; enabled = true; toggle.disabled = false;
         toggle.textContent = '关闭麦克风吹沙'; toggle.setAttribute('aria-pressed', 'true');
-        dock.hidden = nozzle.hidden = false; floor = .008;
+        dock.hidden = nozzle.hidden = false; floor = .006;
         calibratedAt = performance.now() + 1200;
         message.textContent = '先保持安静 1 秒，正在适应现场声音';
         api.state.activePointers.clear(); position(); api.closeDrawer();
@@ -91,7 +93,8 @@
     }
     function press(event) {
       event.preventDefault(); event.stopPropagation();
-      if (!enabled || performance.now() < calibratedAt || api.state.paused || context.state !== 'running') return;
+      if (!enabled || performance.now() < calibratedAt || api.state.paused) return;
+      if (context.state !== 'running') context.resume().catch(() => {});
       if (held) return;
       held = true; captured = false; sustained = 0; api.state.activePointers.clear();
       hold.setAttribute('aria-pressed', 'true'); hold.classList.add('blowing');
@@ -128,20 +131,20 @@
     });
     function tick(dt, now) {
       if (!enabled || !analyser) return;
-      if (context.state !== 'running') { release(); message.textContent = '麦克风已中断，请关闭后重新开启'; return; }
+      if (context.state !== 'running') { message.textContent = '正在恢复麦克风，请继续按住'; return; }
       analyser.getFloatTimeDomainData(samples);
-      let energy = 0, crossings = 0;
+      let energy = 0;
       for (let i = 0; i < samples.length; i++) {
         energy += samples[i] * samples[i];
-        if (i && (samples[i] >= 0) !== (samples[i - 1] >= 0)) crossings++;
+
       }
-      const rms = Math.sqrt(energy / samples.length), zcr = crossings / samples.length;
+      const rms = Math.sqrt(energy / samples.length);
       if (!held) floor = floor * .96 + Math.min(.12, rms) * .04;
       if (now < calibratedAt) return;
       if (!held || api.state.paused) { release(); message.textContent = api.state.paused ? '已暂停创作' : '拖动风口 · 按住下方按钮并吹气'; return; }
-      const threshold = Math.max(.008, floor * (3.4 - Number(sensitivity.value) * .022) + (101 - Number(sensitivity.value)) * .00015);
-      // A sustained, noisy signal is a heuristic, not speech recognition.
-      const candidate = rms > threshold && zcr > .035;
+      const threshold = Math.max(.004, floor * (2.4 - Number(sensitivity.value) * .012) + (100 - Number(sensitivity.value)) * .00006);
+      // Require a sustained rise above room noise while held; microphone frequency responses vary.
+      const candidate = rms > threshold;
       sustained = candidate ? sustained + Math.min(dt, 50) : 0;
       const target = sustained > 100 ? Math.min(1, (rms - threshold) / Math.max(.025, threshold * 2)) : 0;
       smooth = smooth * .6 + target * .4; meter.value = smooth;

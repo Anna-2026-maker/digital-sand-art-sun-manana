@@ -703,3 +703,7 @@ img { -webkit-user-drag: none; user-drag: none; }
 #windHold.blowing { background:#c44b1c; box-shadow:0 0 0 3px #ffad4566; }
 .wind-live[hidden],.wind-nozzle[hidden] { display:none!important; }
 .drawer-open .wind-live { visibility:hidden; }
+
+.wind-quick-icon { font-size:24px; line-height:1; }
+.wind-live { bottom:max(50px, env(safe-area-inset-bottom, 0px) + 46px); }
+@media (min-width: 721px) and (pointer:fine) { .wind-live { bottom:55px; } }

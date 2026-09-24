@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="theme-color" content="#38100d">
     <title>MAÑANA · 落日沙画画台</title>
-    <link rel="stylesheet" href="./style.css?v=2">
-    <script src="./wind.js?v=1" defer></script>
-    <script src="./app.js?v=2" defer></script>
+    <link rel="stylesheet" href="./style.css?v=3">
+    <script src="./sunset-colors.js?v=2" defer></script>
+    <script src="./wind.js?v=2" defer></script>
+    <script src="./app.js?v=3" defer></script>
   </head>
   <body class="web-version">
     <main id="sandApp" class="sand-app">
@@ -28,7 +29,7 @@
             <b>MAÑANA</b>
             <small>落日沙画画台</small>
           </div>
-          <span class="version">落日明日 · 主题版 1.1</span>
+          <span class="version">落日明日 · 主题版 1.2</span>
         </header>
 
         <section id="welcome" class="welcome" aria-hidden="true">
@@ -112,6 +113,7 @@
           <svg class="toolbar-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"></circle><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"></path></svg>
           <em>透光</em>
         </button>
+        <button id="windQuickButton" type="button" aria-label="打开吹沙设置"><span class="wind-quick-icon" aria-hidden="true">〰</span><em>吹沙</em></button>
         <button id="canvasLockButton" class="canvas-lock-button" type="button" aria-pressed="true" aria-label="画台已锁定，点击解锁移动和缩放">
           <svg class="lock-glyph" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M7 10V7a5 5 0 0 1 10 0v3"></path>
