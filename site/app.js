@@ -968,8 +968,19 @@
 
   async function bitmapFromFile(file) {
     if (!file || !file.type.startsWith("image/")) throw new Error("请选择图片文件");
-    if (typeof createImageBitmap !== "function") throw new Error("当前小红书版本不支持本地图片解析");
-    return createImageBitmap(file);
+    if (typeof createImageBitmap === "function") return createImageBitmap(file);
+    const url = URL.createObjectURL(file);
+    try {
+      const image = new Image();
+      image.src = url;
+      await new Promise(function (resolve, reject) {
+        image.onload = resolve;
+        image.onerror = function () { reject(new Error("图片读取失败，请更换图片重试")); };
+      });
+      return image;
+    } finally {
+      URL.revokeObjectURL(url);
+    }
   }
 
   function drawBitmapContained(context, bitmap, width, height) {
@@ -995,7 +1006,7 @@
       drawBitmapContained(sourceContext, bitmap, state.cols, state.rows);
       const pixels = sourceContext.getImageData(0, 0, state.cols, state.rows).data;
       window.MananaColor.photoToField(pixels, state.cols, state.rows, state.field);
-      bitmap.close();
+      if (typeof bitmap.close === "function") bitmap.close();
       markStarted();
       setTool("shape");
       setStatus("沙画已生成 · 可继续塑形、落砂或透光");
@@ -1022,7 +1033,7 @@
       source.height = height;
       const sourceContext = source.getContext("2d", { willReadFrequently: true });
       drawBitmapContained(sourceContext, bitmap, width, height);
-      bitmap.close();
+      if (typeof bitmap.close === "function") bitmap.close();
 
       const sourceImage = sourceContext.getImageData(0, 0, width, height);
       const output = sourceContext.createImageData(width, height);
@@ -1286,12 +1297,12 @@
     setStatus("正在打开小红书笔记发布页…");
     try {
       saveProject(false);
+      const imagePath = await createArtworkTempFile(miniTool);
       await miniTool.postNote({
-        title: "我的数字沙画",
-        content: "用指尖沙画画台创作的作品",
-        pageType: "photo_publish",
+        title: "我的日出沙画",
+        content: "用 MAÑANA 日出沙画画台创作的作品",
         mediaInfo: {
-          image_resources: [{ url: sandArtworkDataUrl() }]
+          image_resources: [{ url: imagePath }]
         }
       });
       setStatus("已打开笔记发布页 · 可继续编辑并发布");
