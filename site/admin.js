@@ -72,7 +72,7 @@
   $("next").addEventListener("click", () => { page++; load().catch(error => message(error.message)); });
   $("closeViewer").addEventListener("click", closeViewer);
   $("viewer").addEventListener("click", event => { if (event.target === $("viewer")) closeViewer(); });
-  $("downloadImage").addEventListener("click", () => { if (!selected || !imageUrl) return; const link = document.createElement("a"); link.href = imageUrl; link.download = "manana-" + selected.id + ".png"; link.click(); });
+  $("downloadImage").addEventListener("click", () => { if (!selected || !imageUrl) return; const link = document.createElement("a"); link.href = imageUrl; link.download = "manana-" + selected.id + ".jpg"; link.click(); });
   $("printImage").addEventListener("click", async () => {
     if (!selected || !imageUrl) return;
     try { await request("/api/admin/artworks/" + selected.id + "/print", { method: "PATCH" }); selected.print_count++; $("viewerMeta").textContent += " · 已记录打印"; window.print(); load().catch(error => message(error.message)); }

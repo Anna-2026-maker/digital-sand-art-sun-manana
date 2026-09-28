@@ -2,6 +2,5 @@
   "name": "manana-artworks-api",
   "main": "src.js",
   "compatibility_date": "2026-09-01",
-  "d1_databases": [{ "binding": "DB", "database_name": "manana-artworks", "database_id": "REPLACE_WITH_D1_DATABASE_ID", "migrations_dir": "migrations" }],
-  "r2_buckets": [{ "binding": "ARTWORKS", "bucket_name": "manana-artworks" }]
+  "d1_databases": [{ "binding": "DB", "database_name": "manana-artworks", "database_id": "REPLACE_WITH_D1_DATABASE_ID", "migrations_dir": "migrations" }]
 }

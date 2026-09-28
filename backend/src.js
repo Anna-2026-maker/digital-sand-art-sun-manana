@@ -1,5 +1,5 @@
-// Private artwork store: public uploads require explicit consent; every read requires admin login.
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+// Private artwork store: compressed JPEGs live in D1; every read requires admin login.
+const MAX_IMAGE_BYTES = 1800000;
 const encoder = new TextEncoder();
 const json = (value, status = 200, headers = {}) => new Response(JSON.stringify(value), {
   status, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...headers }
@@ -36,20 +36,31 @@ async function consumeLimit(env, key, max, windowMs) {
   return true;
 }
 function imageSize(bytes) {
-  if (bytes.byteLength < 24) return null;
-  const png = [137, 80, 78, 71, 13, 10, 26, 10];
-  if (!png.every((value, index) => bytes[index] === value) || String.fromCharCode(...bytes.slice(12, 16)) !== "IHDR") return null;
-  const data = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const width = data.getUint32(16), height = data.getUint32(20);
-  return width > 0 && height > 0 && width <= 6000 && height <= 6000 ? { width, height } : null;
+  if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes.at(-2) !== 0xff || bytes.at(-1) !== 0xd9) return null;
+  let offset = 2;
+  while (offset + 4 < bytes.length) {
+    if (bytes[offset++] !== 0xff) return null;
+    let marker = bytes[offset++];
+    while (marker === 0xff) marker = bytes[offset++];
+    if (marker === 0xd9 || marker === 0xda) break;
+    const length = (bytes[offset] << 8) | bytes[offset + 1];
+    if (length < 2 || offset + length > bytes.length) return null;
+    if ([0xc0, 0xc1, 0xc2, 0xc3].includes(marker) && length >= 7) {
+      const height = (bytes[offset + 3] << 8) | bytes[offset + 4];
+      const width = (bytes[offset + 5] << 8) | bytes[offset + 6];
+      return width > 0 && height > 0 && width <= 6000 && height <= 6000 ? { width, height } : null;
+    }
+    offset += length;
+  }
+  return null;
 }
 export default {
   async fetch(request, env) {
     const origin = request.headers.get("Origin");
     const allowed = origin === env.ALLOWED_ORIGIN;
-    const cors = allowed ? { "Access-Control-Allow-Origin": origin, "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Artist-Name, X-Exhibition-Consent", "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS", "Vary": "Origin" } : {};
+    const cors = allowed ? { "Access-Control-Allow-Origin": origin, "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Edit-Token, X-Exhibition-Consent", "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS", "Vary": "Origin" } : {};
     const reply = (body, status = 200) => json(body, status, cors);
-    if (!env.DB || !env.ARTWORKS || !env.ADMIN_PASSWORD || !env.SESSION_SECRET || !env.ALLOWED_ORIGIN) return reply({ error: "服务尚未配置" }, 503);
+    if (!env.DB || !env.ADMIN_PASSWORD || !env.SESSION_SECRET || !env.ALLOWED_ORIGIN) return reply({ error: "服务尚未配置" }, 503);
     if (request.method === "OPTIONS") return allowed ? new Response(null, { status: 204, headers: cors }) : reply({ error: "来源无效" }, 403);
     if (!allowed) return reply({ error: "来源无效" }, 403);
     const path = new URL(request.url).pathname;
@@ -58,29 +69,24 @@ export default {
     try {
       if ((path === "/api/artworks" && request.method === "POST") || (/^\/api\/artworks\/[a-f0-9-]{36}$/.test(path) && request.method === "PUT")) {
         if (request.headers.get("X-Exhibition-Consent") !== "notice") return reply({ error: "需要同意提交作品" }, 400);
-        if (request.headers.get("Content-Type") !== "image/png") return reply({ error: "只接收 PNG 作品" }, 415);
-        if (Number(request.headers.get("Content-Length")) > MAX_IMAGE_BYTES) return reply({ error: "图片超过 5 MB" }, 413);
+        if (request.headers.get("Content-Type") !== "image/jpeg") return reply({ error: "只接收 JPEG 作品" }, 415);
+        if (Number(request.headers.get("Content-Length")) > MAX_IMAGE_BYTES) return reply({ error: "图片超过 1.8 MB" }, 413);
         if (!await consumeLimit(env, `upload:${client}`, 10000, 24 * 3600 * 1000)) return reply({ error: "今日提交次数已达上限" }, 429);
         const bytes = new Uint8Array(await request.arrayBuffer());
         const dimensions = bytes.byteLength <= MAX_IMAGE_BYTES ? imageSize(bytes) : null;
-        if (!dimensions) return reply({ error: "PNG 图片无效或超过 5 MB" }, 400);
+        if (!dimensions) return reply({ error: "JPEG 图片无效或超过 1.8 MB" }, 400);
         if (request.method === "PUT") {
           const id = path.split("/").pop();
-          const row = await env.DB.prepare("SELECT object_key,edit_hash FROM artworks WHERE id = ?").bind(id).first();
+          const row = await env.DB.prepare("SELECT edit_hash FROM artworks WHERE id = ?").bind(id).first();
           const credential = request.headers.get("X-Edit-Token") || "";
           if (!row || !credential || !equal(row.edit_hash, b64(await digest(credential)))) return reply({ error: "无法更新作品" }, 403);
-          await env.ARTWORKS.put(row.object_key, bytes, { httpMetadata: { contentType: "image/png" } });
-          await env.DB.prepare("UPDATE artworks SET bytes=?,width=?,height=?,updated_at=? WHERE id=?").bind(bytes.byteLength, dimensions.width, dimensions.height, new Date().toISOString(), id).run();
+          await env.DB.prepare("UPDATE artworks SET image=?,bytes=?,width=?,height=?,updated_at=? WHERE id=?").bind(bytes, bytes.byteLength, dimensions.width, dimensions.height, new Date().toISOString(), id).run();
           return reply({ id });
         }
         const id = crypto.randomUUID(), editToken = `${crypto.randomUUID()}-${crypto.randomUUID()}`;
         const now = new Date().toISOString();
-        const key = `artworks/${now.slice(0, 10)}/${id}.png`;
-        await env.ARTWORKS.put(key, bytes, { httpMetadata: { contentType: "image/png" } });
-        try {
-          await env.DB.prepare("INSERT INTO artworks (id,artist,object_key,edit_hash,created_at,updated_at,bytes,width,height) VALUES (?,?,?,?,?,?,?,?,?)")
-            .bind(id, "", key, b64(await digest(editToken)), now, now, bytes.byteLength, dimensions.width, dimensions.height).run();
-        } catch (error) { await env.ARTWORKS.delete(key); throw error; }
+        await env.DB.prepare("INSERT INTO artworks (id,artist,image,edit_hash,created_at,updated_at,bytes,width,height) VALUES (?,?,?,?,?,?,?,?,?)")
+          .bind(id, "", bytes, b64(await digest(editToken)), now, now, bytes.byteLength, dimensions.width, dimensions.height).run();
         return reply({ id, edit_token: editToken, created_at: now }, 201);
       }
       if (path === "/api/admin/login" && request.method === "POST") {
@@ -98,18 +104,17 @@ export default {
       }
       const match = path.match(/^\/api\/admin\/artworks\/([a-f0-9-]{36})(?:\/(image|print))?$/);
       if (!match) return reply({ error: "未找到" }, 404);
-      const work = await env.DB.prepare("SELECT * FROM artworks WHERE id = ?").bind(match[1]).first();
+      const work = await env.DB.prepare("SELECT id,print_count FROM artworks WHERE id = ?").bind(match[1]).first();
       if (!work) return reply({ error: "作品不存在" }, 404);
       if (match[2] === "image" && request.method === "GET") {
-        const object = await env.ARTWORKS.get(work.object_key);
-        return object ? new Response(object.body, { headers: { ...cors, "Content-Type": "image/png", "Cache-Control": "private, no-store", "Content-Disposition": `inline; filename="manana-${work.id}.png"` } }) : reply({ error: "图片不存在" }, 404);
+        const image = await env.DB.prepare("SELECT image FROM artworks WHERE id = ?").bind(work.id).first();
+        return image ? new Response(new Uint8Array(image.image), { headers: { ...cors, "Content-Type": "image/jpeg", "Cache-Control": "private, no-store", "Content-Disposition": `inline; filename="manana-${work.id}.jpg"` } }) : reply({ error: "图片不存在" }, 404);
       }
       if (match[2] === "print" && request.method === "PATCH") {
         await env.DB.prepare("UPDATE artworks SET print_count = print_count + 1 WHERE id = ?").bind(work.id).run();
         return reply({ ok: true });
       }
       if (!match[2] && request.method === "DELETE") {
-        await env.ARTWORKS.delete(work.object_key);
         await env.DB.prepare("DELETE FROM artworks WHERE id = ?").bind(work.id).run();
         return reply({ ok: true });
       }

@@ -370,7 +370,7 @@
       updateCanvasView();
       if (project.tool === "sand" || project.tool === "shape" || project.tool === "light") setTool(project.tool);
       state.currentProjectId = project.id;
-      exhibitionId = ""; editToken = ""; lastArtworkData = "";
+      exhibitionEpoch++; exhibitionId = ""; editToken = ""; lastArtworkData = "";
       scheduleExhibitionSync(1500);
       syncProjectUi(projects);
       closeDrawer();
@@ -968,7 +968,7 @@
     snapshot();
     state.field.fill(0);
     clearTimeout(autoSaveTimer);
-    exhibitionId = ""; editToken = ""; lastArtworkData = "";
+    exhibitionEpoch++; exhibitionId = ""; editToken = ""; lastArtworkData = "";
     state.started = false;
     welcomeNode.classList.remove("hidden");
     setStatus("画台已清空 · 触摸屏幕重新开始");
@@ -1233,7 +1233,7 @@
   }
 
   let autoSaveTimer = null, autoSaveInFlight = false, autoSavePending = false;
-  let exhibitionId = "", editToken = "", lastArtworkData = "";
+  let exhibitionId = "", editToken = "", lastArtworkData = "", exhibitionEpoch = 0;
   function scheduleExhibitionSync(delay = 4000) {
     if (!window.MANANA_ARTWORKS_API || !state.started) return;
     clearTimeout(autoSaveTimer);
@@ -1243,20 +1243,38 @@
     if (!state.started || !window.MANANA_ARTWORKS_API || !state.field.some(function (value) { return value > 0.0001; })) return;
     if (autoSaveInFlight) { autoSavePending = true; return; }
     autoSaveInFlight = true;
+    const epoch = exhibitionEpoch;
     try {
-      const data = canvas.toDataURL("image/png");
+      const exportCanvas = document.createElement("canvas");
+      const scale = Math.min(1, 1600 / Math.max(canvas.width, canvas.height));
+      exportCanvas.width = Math.max(1, Math.round(canvas.width * scale));
+      exportCanvas.height = Math.max(1, Math.round(canvas.height * scale));
+      exportCanvas.getContext("2d", { alpha: false }).drawImage(canvas, 0, 0, exportCanvas.width, exportCanvas.height);
+      let data = exportCanvas.toDataURL("image/jpeg", 0.9);
+      let blob = dataUrlToFile(data);
+      if (blob.size > 1800000) {
+        data = exportCanvas.toDataURL("image/jpeg", 0.72);
+        blob = dataUrlToFile(data);
+      }
+      if (blob.size > 1800000) {
+        exportCanvas.width = Math.max(1, Math.round(canvas.width * Math.min(1, 1200 / Math.max(canvas.width, canvas.height))));
+        exportCanvas.height = Math.max(1, Math.round(canvas.height * Math.min(1, 1200 / Math.max(canvas.width, canvas.height))));
+        exportCanvas.getContext("2d", { alpha: false }).drawImage(canvas, 0, 0, exportCanvas.width, exportCanvas.height);
+        data = exportCanvas.toDataURL("image/jpeg", 0.7);
+        blob = dataUrlToFile(data);
+      }
+      if (blob.size > 1800000) throw new Error("作品超过容量上限，自动同步已暂停");
       if (data === lastArtworkData) return;
-      const blob = dataUrlToFile(data);
-      if (blob.size > 5 * 1024 * 1024) throw new Error("作品超过 5 MB，自动同步已暂停");
       const base = window.MANANA_ARTWORKS_API.replace(/\/$/, "");
       const url = base + "/api/artworks" + (exhibitionId ? "/" + exhibitionId : "");
       const response = await fetch(url, {
         method: exhibitionId ? "PUT" : "POST",
-        headers: { "Content-Type": "image/png", "X-Exhibition-Consent": "notice", ...(exhibitionId ? { "X-Edit-Token": editToken } : {}) },
+        headers: { "Content-Type": "image/jpeg", "X-Exhibition-Consent": "notice", ...(exhibitionId ? { "X-Edit-Token": editToken } : {}) },
         body: blob
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "自动同步失败");
+      if (epoch !== exhibitionEpoch) return;
       if (!exhibitionId) { exhibitionId = result.id; editToken = result.edit_token; }
       lastArtworkData = data;
       exhibitionMessage.textContent = "作品已自动同步至活动作品库 · 编号 " + exhibitionId.slice(0, 8);
@@ -1283,7 +1301,7 @@
     const binary = atob(parts[1]);
     const bytes = new Uint8Array(binary.length);
     for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-    return new File([bytes], "manana-sunset-sand-art.png", { type: mime });
+    return new File([bytes], "manana-sunrise-sand-art." + (mime === "image/jpeg" ? "jpg" : "png"), { type: mime });
   }
 
   async function createArtworkTempFile(miniTool) {

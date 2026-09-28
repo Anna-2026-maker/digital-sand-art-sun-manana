@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS artworks (
   id TEXT PRIMARY KEY,
   artist TEXT NOT NULL DEFAULT '',
-  object_key TEXT NOT NULL,
+  image BLOB NOT NULL,
   edit_hash TEXT NOT NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
