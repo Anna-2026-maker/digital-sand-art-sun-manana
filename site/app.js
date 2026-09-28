@@ -1510,6 +1510,7 @@
   setupCanvas();
   syncProjectUi();
   if (!window.MANANA_ARTWORKS_API) exhibitionMessage.textContent = "活动作品库尚未上线；作品暂时只保存在本机。";
+  else document.getElementById("welcomeSyncNotice").textContent = "创作画面会自动同步到活动作品库，供现场管理与打印。";
   setInterval(function () { if (state.started) scheduleExhibitionSync(250); }, 8000);
   requestAnimationFrame(frame);
 }());
