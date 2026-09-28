@@ -8,7 +8,8 @@
     <link rel="stylesheet" href="./style.css?v=4">
     <script src="./sunset-colors.js?v=2" defer></script>
     <script src="./wind.js?v=3" defer></script>
-    <script src="./app.js?v=4" defer></script>
+    <script src="./exhibition-config.js?v=1" defer></script>
+    <script src="./app.js?v=5" defer></script>
   </head>
   <body class="web-version">
     <main id="sandApp" class="sand-app">
@@ -36,7 +37,7 @@
           <span>01 / A LITTLE SUNRISE</span>
           <h1>迎着日出，<br>画下明天。</h1>
           <p>通过下方画笔大小滑块控制笔触范围。<br>落砂叠出橙红，透光擦出金色，画下你的日出。</p>
-          <i>触摸屏幕或移动光标开始</i>
+          <i>创作画面会自动同步到活动作品库，供现场管理与打印。<br>触摸屏幕或移动光标开始</i>
         </section>
 
         <button id="drawerToggleButton" class="drawer-toggle" type="button" aria-controls="toolDock" aria-expanded="false" aria-label="打开创作工具，可上下拖动">
@@ -80,6 +81,7 @@
             <button id="saveImageButton" type="button"><span>↓</span><b>下载作品</b></button>
             <button id="postNoteButton" type="button"><span>↗</span><b>分享作品</b></button>
             <small>下载与分享的作品不会包含辅助线</small>
+            <small id="exhibitionMessage" role="status">创作画面约每 8 秒自动同步至活动作品库，供主办方实时查看、管理、统计与现场打印；上传的参考原图与麦克风声音不会单独保存。</small>
           </section>
 
           <section class="project-actions" aria-label="本机工程存档">

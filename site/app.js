@@ -36,6 +36,7 @@
   const drawerScrim = document.getElementById("drawerScrim");
   const saveImageButton = document.getElementById("saveImageButton");
   const postNoteButton = document.getElementById("postNoteButton");
+  const exhibitionMessage = document.getElementById("exhibitionMessage");
   const saveProjectButton = document.getElementById("saveProjectButton");
   const saveNewProjectButton = document.getElementById("saveNewProjectButton");
   const projectGallery = document.getElementById("projectGallery");
@@ -369,6 +370,8 @@
       updateCanvasView();
       if (project.tool === "sand" || project.tool === "shape" || project.tool === "light") setTool(project.tool);
       state.currentProjectId = project.id;
+      exhibitionId = ""; editToken = ""; lastArtworkData = "";
+      scheduleExhibitionSync(1500);
       syncProjectUi(projects);
       closeDrawer();
       setStatus("工程已恢复 · 可以继续创作");
@@ -924,6 +927,7 @@
       return;
     }
     state.activePointers.delete(event.pointerId);
+    scheduleExhibitionSync();
     try { canvas.releasePointerCapture(event.pointerId); } catch (error) { void error; }
   }
 
@@ -943,6 +947,7 @@
     state.future.push(state.field.slice());
     if (state.future.length > 12) state.future.shift();
     state.field.set(previous);
+    scheduleExhibitionSync();
     setStatus("已撤回上一步 · 可使用取消撤回恢复");
   }
 
@@ -954,6 +959,7 @@
     if (state.history.length > 12) state.history.shift();
     state.field.set(next);
     markStarted();
+    scheduleExhibitionSync();
     setStatus("已取消撤回 · 恢复刚才的操作");
   }
 
@@ -961,6 +967,8 @@
     wind.release();
     snapshot();
     state.field.fill(0);
+    clearTimeout(autoSaveTimer);
+    exhibitionId = ""; editToken = ""; lastArtworkData = "";
     state.started = false;
     welcomeNode.classList.remove("hidden");
     setStatus("画台已清空 · 触摸屏幕重新开始");
@@ -1009,6 +1017,7 @@
       if (typeof bitmap.close === "function") bitmap.close();
       markStarted();
       setTool("shape");
+      scheduleExhibitionSync(1500);
       setStatus("沙画已生成 · 可继续塑形、落砂或透光");
       closeDrawer();
     } catch (error) {
@@ -1221,6 +1230,42 @@
 
   function sandArtworkDataUrl() {
     return canvas.toDataURL("image/png");
+  }
+
+  let autoSaveTimer = null, autoSaveInFlight = false, autoSavePending = false;
+  let exhibitionId = "", editToken = "", lastArtworkData = "";
+  function scheduleExhibitionSync(delay = 4000) {
+    if (!window.MANANA_ARTWORKS_API || !state.started) return;
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(syncExhibitionArtwork, delay);
+  }
+  async function syncExhibitionArtwork() {
+    if (!state.started || !window.MANANA_ARTWORKS_API || !state.field.some(function (value) { return value > 0.0001; })) return;
+    if (autoSaveInFlight) { autoSavePending = true; return; }
+    autoSaveInFlight = true;
+    try {
+      const data = canvas.toDataURL("image/png");
+      if (data === lastArtworkData) return;
+      const blob = dataUrlToFile(data);
+      if (blob.size > 5 * 1024 * 1024) throw new Error("作品超过 5 MB，自动同步已暂停");
+      const base = window.MANANA_ARTWORKS_API.replace(/\/$/, "");
+      const url = base + "/api/artworks" + (exhibitionId ? "/" + exhibitionId : "");
+      const response = await fetch(url, {
+        method: exhibitionId ? "PUT" : "POST",
+        headers: { "Content-Type": "image/png", "X-Exhibition-Consent": "notice", ...(exhibitionId ? { "X-Edit-Token": editToken } : {}) },
+        body: blob
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "自动同步失败");
+      if (!exhibitionId) { exhibitionId = result.id; editToken = result.edit_token; }
+      lastArtworkData = data;
+      exhibitionMessage.textContent = "作品已自动同步至活动作品库 · 编号 " + exhibitionId.slice(0, 8);
+    } catch (error) {
+      exhibitionMessage.textContent = (error && error.message || "自动同步失败") + " · 将在继续创作时重试";
+    } finally {
+      autoSaveInFlight = false;
+      if (autoSavePending) { autoSavePending = false; scheduleExhibitionSync(1000); }
+    }
   }
 
   function downloadArtwork() {
@@ -1458,10 +1503,13 @@
   window.addEventListener("pageshow", scheduleCanvasSetup);
   document.addEventListener("visibilitychange", function () {
     if (!document.hidden) scheduleCanvasSetup();
+    else if (state.started) scheduleExhibitionSync(0);
   });
   const wind = window.MananaWind.attach({ state, snapshot, localPoint, status: setStatus, started: markStarted, closeDrawer });
   syncLandscapeMode();
   setupCanvas();
   syncProjectUi();
+  if (!window.MANANA_ARTWORKS_API) exhibitionMessage.textContent = "活动作品库尚未上线；作品暂时只保存在本机。";
+  setInterval(function () { if (state.started) scheduleExhibitionSync(250); }, 8000);
   requestAnimationFrame(frame);
 }());

@@ -47,3 +47,36 @@ python3 -m http.server 8000 --directory site
 ## 主题版 1.3：明显的扇形吹沙
 
 「灵敏度 · 风力」滑块现在同时控制声音触发门槛、扇形吹动范围与沙粒移动量。高档位能响应更轻的吹气；持续吹气时沙层会被明显推开，低档位保留细微效果。吹沙依然只重新分布已有沙子，松手即停且每次可以撤回。移动设备的计算范围和更新频率设有限制，以兼顾流畅度。
+
+
+## 活动作品后台（待配置云服务）
+
+`site/admin.html` 是工作人员的后台入口。网页版开始作画后约每 8 秒同步当前画面，松手后约 4 秒再同步；同一次创作持续更新同一记录。后台每 5 秒刷新列表，支持作品大图、下载 PNG、A6 横向打印、打印操作计数与删除。上传的是沙画画布 PNG，不包含线稿参考图或麦克风音频；不采集姓名或登录身份。因此“作品总数”是画作数量，不是去重后的用户人数。本机工程和小红书发布包仍独立。
+
+后端是 Cloudflare Worker + 私有 R2 桶 + D1 数据库。后台仅能用密码登录，8 小时会话只保存在管理员浏览器的 sessionStorage；作品图片经鉴权接口读取，R2 桶不要开启公共访问。页面公开路径 `admin.html` 本身不含作品数据。自动同步使用每幅作品的随机编辑密钥，后续只能更新该幅作品。上线前应告知参与者画作的用途和留存期限；如现场需删除，后台可逐条删除。
+
+### 上线步骤（需要 Cloudflare 账户授权）
+
+在 `backend/` 目录执行：
+
+```sh
+npx wrangler login
+npx wrangler d1 create manana-artworks
+npx wrangler r2 bucket create manana-artworks
+```
+
+把 D1 返回的 `database_id` 填入 `backend/wrangler.jsonc`，再运行：
+
+```sh
+npx wrangler d1 migrations apply manana-artworks --remote
+npx wrangler deploy
+npx wrangler secret put ADMIN_PASSWORD
+npx wrangler secret put SESSION_SECRET
+npx wrangler secret put ALLOWED_ORIGIN
+```
+
+`ADMIN_PASSWORD` 使用独立强密码；`SESSION_SECRET` 用 32 字节以上的随机字符串；`ALLOWED_ORIGIN` 填 `https://anna-2026-maker.github.io`（不加结尾斜线）。把 Worker 的 HTTPS 地址填入 `site/exhibition-config.js`，提交并部署网页。后台入口：`https://anna-2026-maker.github.io/digital-sand-art-sun-manana/admin.html`。确认一次真实的画作自动同步、后台预览和打印后再用于活动。
+
+没有 Worker 地址时，网站仍可创作、保存与下载，页面会显示“活动作品库尚未上线”；作品不会悄悄提交到不存在的服务。不要把密码写入 Git 或前端配置。R2 和 D1 的用量及费用由 Cloudflare 账户承担。
+
+测试：`node --test tests/*.test.cjs`，其中后台测试覆盖作品创建、鉴权读取、更新、打印计数、删除与跨来源拒绝。
