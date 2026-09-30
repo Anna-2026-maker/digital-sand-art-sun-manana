@@ -2,5 +2,5 @@
   "name": "manana-artworks-api",
   "main": "src.js",
   "compatibility_date": "2026-09-01",
-  "d1_databases": [{ "binding": "DB", "database_name": "manana-artworks", "database_id": "REPLACE_WITH_D1_DATABASE_ID", "migrations_dir": "migrations" }]
+  "d1_databases": [{ "binding": "DB", "database_name": "manana-artworks", "database_id": "e19170d6-5d6c-4acc-97a5-5022a153b709", "migrations_dir": "migrations" }]
 }
