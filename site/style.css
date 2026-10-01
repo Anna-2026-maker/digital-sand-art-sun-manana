@@ -494,16 +494,39 @@ img { -webkit-user-drag: none; user-drag: none; }
   }
   .drawer-head {
     display: flex;
+    position: sticky;
+    z-index: 1;
+    top: 0;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: space-between;
+    gap: 8px;
     min-height: 48px;
-    padding: 0 112px 8px 0;
+    padding: 0 0 8px;
     border-bottom: 1px solid rgba(91, 43, 8, .20);
+    background: #ffe8a2;
     color: var(--ink);
   }
-  .drawer-head > div { display: grid; flex: 1 1 auto; gap: 2px; }
+  .drawer-head > div { display: grid; flex: 1 1 auto; min-width: 0; gap: 2px; }
   .drawer-head b { font: 600 14px "Songti SC", serif; letter-spacing: .08em; }
   .drawer-head small { font-size: 8px; opacity: .62; }
+  .drawer-close {
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid rgba(91, 43, 8, .4);
+    border-radius: 50%;
+    background: rgba(255, 244, 206, .95);
+    box-shadow: 0 3px 10px rgba(75, 32, 4, .16);
+    color: var(--ink);
+    font: 600 30px/1 sans-serif;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .drawer-close span { transform: translateY(-2px); }
+  .drawer-close:focus-visible { outline: 3px solid #824314; outline-offset: 2px; }
   .tool-dock {
     z-index: 10;
     top: 0;

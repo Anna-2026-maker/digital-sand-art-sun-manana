@@ -32,6 +32,7 @@
   const guideConfirmButton = document.getElementById("guideConfirmButton");
   const toolButtons = Array.from(document.querySelectorAll("[data-tool]"));
   const drawerToggleButton = document.getElementById("drawerToggleButton");
+  const drawerCloseButton = document.getElementById("drawerCloseButton");
   const toolDock = document.getElementById("toolDock");
   const drawerScrim = document.getElementById("drawerScrim");
   const saveImageButton = document.getElementById("saveImageButton");
@@ -1456,6 +1457,7 @@
     state.drawerSwipeSuppressClick = false;
   }, true);
   drawerScrim.addEventListener("click", closeDrawer);
+  drawerCloseButton.addEventListener("click", closeDrawer);
   saveImageButton.addEventListener("click", saveArtworkToAlbum);
   postNoteButton.addEventListener("click", postArtworkToXhs);
   submitExhibitionButton.addEventListener("click", submitExhibitionArtwork);
