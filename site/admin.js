@@ -20,13 +20,20 @@
   }
   async function load() {
     message("正在读取作品…");
-    const result = await (await request("/api/admin/artworks?page=" + page)).json();
-    works = result.works;
+    const result = await (await request("/api/admin/artworks?page=0")).json();
+    const pages = Math.ceil(result.stats.total / 48);
+    const remaining = await Promise.all(Array.from({ length: Math.max(0, pages - 1) }, (_, index) =>
+      request("/api/admin/artworks?page=" + (index + 1)).then(response => response.json())
+    ));
+    const latest = [result, ...remaining].flatMap(batch => batch.works)
+      .sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+    page = Math.min(page, Math.max(0, Math.ceil(latest.length / 48) - 1));
+    works = latest.slice(page * 48, (page + 1) * 48);
     $("total").textContent = result.stats.total;
     $("today").textContent = result.stats.today || 0;
     $("prints").textContent = result.stats.prints;
     $("pageLabel").textContent = "第 " + (page + 1) + " 页";
-    $("previous").disabled = page === 0; $("next").disabled = works.length < 48;
+    $("previous").disabled = page === 0; $("next").disabled = (page + 1) * 48 >= latest.length;
     const gallery = $("gallery");
     gallery.replaceChildren();
     if (!works.length) gallery.textContent = "这一页暂无作品";
