@@ -100,12 +100,14 @@
   function openDrawer() {
     toolDock.classList.remove("swiping");
     toolDock.style.transform = "";
+    stage.classList.remove("drawer-collapsed");
     stage.classList.add("drawer-open");
     drawerToggleButton.setAttribute("aria-expanded", "true");
   }
 
   function closeDrawer() {
     stage.classList.remove("drawer-open");
+    stage.classList.add("drawer-collapsed");
     drawerToggleButton.setAttribute("aria-expanded", "false");
     toolDock.classList.remove("swiping");
     toolDock.style.transform = "";
