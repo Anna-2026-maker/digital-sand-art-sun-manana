@@ -228,13 +228,13 @@ img { -webkit-user-drag: none; user-drag: none; }
   border: 1px solid rgba(91, 43, 8, .4);
   border-radius: 50%;
   background: rgba(255, 244, 206, .95);
-  box-shadow: 0 3px 10px rgba(75, 32, 4, .16);
+  box-shadow: 0 2px 7px rgba(75, 32, 4, .12);
   color: var(--ink);
-  font: 600 30px/1 sans-serif;
   cursor: pointer;
   touch-action: manipulation;
 }
-.drawer-close span { transform: translateY(-2px); }
+.drawer-close svg { display: block; width: 22px; height: 22px; }
+.drawer-close:hover { background: #fff4cf; }
 .drawer-close:focus-visible { outline: 3px solid #824314; outline-offset: 2px; }
 @media (min-width: 721px) and (pointer: fine) {
   .tool-dock { transition: transform .24s ease; }
