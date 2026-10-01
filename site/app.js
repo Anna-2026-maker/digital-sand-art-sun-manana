@@ -37,7 +37,6 @@
   const drawerScrim = document.getElementById("drawerScrim");
   const saveImageButton = document.getElementById("saveImageButton");
   const postNoteButton = document.getElementById("postNoteButton");
-  const submitExhibitionButton = document.getElementById("submitExhibitionButton");
   const exhibitionMessage = document.getElementById("exhibitionMessage");
   const saveProjectButton = document.getElementById("saveProjectButton");
   const saveNewProjectButton = document.getElementById("saveNewProjectButton");
@@ -374,7 +373,8 @@
       updateCanvasView();
       if (project.tool === "sand" || project.tool === "shape" || project.tool === "light") setTool(project.tool);
       state.currentProjectId = project.id;
-      exhibitionEpoch++; exhibitionId = ""; editToken = ""; lastArtworkData = "";
+      resetArtworkSync();
+      markArtworkChanged();
       syncProjectUi(projects);
       closeDrawer();
       setStatus("工程已恢复 · 可以继续创作");
@@ -730,6 +730,7 @@
         state.field[index] = Math.max(0, Math.min(1.45, state.field[index] + amount * falloff * (0.72 + state.noise[index] * 0.55)));
       }
     }
+    markArtworkChanged();
   }
 
   function paint(x0, y0, x1, y1, radius, speed) {
@@ -778,6 +779,7 @@
         }
       }
     }
+    markArtworkChanged();
   }
 
 
@@ -949,6 +951,7 @@
     state.future.push(state.field.slice());
     if (state.future.length > 12) state.future.shift();
     state.field.set(previous);
+    markArtworkChanged();
     setStatus("已撤回上一步 · 可使用取消撤回恢复");
   }
 
@@ -959,15 +962,17 @@
     state.history.push(state.field.slice());
     if (state.history.length > 12) state.history.shift();
     state.field.set(next);
+    markArtworkChanged();
     markStarted();
     setStatus("已取消撤回 · 恢复刚才的操作");
   }
 
   function clearSand() {
     wind.release();
+    if (artworkDirty && !syncInFlight) syncExhibitionArtwork();
     snapshot();
     state.field.fill(0);
-    exhibitionEpoch++; exhibitionId = ""; editToken = ""; lastArtworkData = "";
+    resetArtworkSync();
     state.started = false;
     welcomeNode.classList.remove("hidden");
     setStatus("画台已清空 · 触摸屏幕重新开始");
@@ -1013,6 +1018,7 @@
       drawBitmapContained(sourceContext, bitmap, state.cols, state.rows);
       const pixels = sourceContext.getImageData(0, 0, state.cols, state.rows).data;
       window.MananaColor.photoToField(pixels, state.cols, state.rows, state.field);
+      markArtworkChanged();
       if (typeof bitmap.close === "function") bitmap.close();
       markStarted();
       setTool("shape");
@@ -1230,19 +1236,43 @@
     return canvas.toDataURL("image/png");
   }
 
-  let submitInFlight = false;
+  let syncInFlight = false, syncTimer = null, artworkDirty = false, artworkRevision = 0, lastSyncAt = 0;
   let exhibitionId = "", editToken = "", lastArtworkData = "", exhibitionEpoch = 0;
-  async function submitExhibitionArtwork() {
+  function resetArtworkSync() {
+    exhibitionEpoch++;
+    exhibitionId = "";
+    editToken = "";
+    lastArtworkData = "";
+    artworkDirty = false;
+    lastSyncAt = 0;
+    artworkRevision++;
+    clearTimeout(syncTimer);
+    syncTimer = null;
+  }
+
+  function scheduleArtworkSync(delay) {
+    if (!window.MANANA_ARTWORKS_API || !artworkDirty || syncTimer || syncInFlight) return;
+    syncTimer = setTimeout(function () {
+      syncTimer = null;
+      syncExhibitionArtwork();
+    }, delay);
+  }
+
+  function markArtworkChanged() {
     if (!window.MANANA_ARTWORKS_API) return;
-    if (!state.started || !state.field.some(function (value) { return value > 0.0001; })) {
-      exhibitionMessage.textContent = "请先创作作品，再点击提交。";
-      return;
-    }
-    if (submitInFlight) return;
-    submitInFlight = true;
-    submitExhibitionButton.disabled = true;
-    exhibitionMessage.textContent = "正在提交作品…请保持页面打开。";
+    artworkDirty = true;
+    artworkRevision++;
+    scheduleArtworkSync(Math.max(3000, lastSyncAt + 30000 - Date.now()));
+  }
+
+  async function syncExhibitionArtwork() {
+    if (!artworkDirty || syncInFlight || !window.MANANA_ARTWORKS_API) return;
+    if (!state.started || !state.field.some(function (value) { return value > 0.0001; })) return;
+    syncInFlight = true;
+    exhibitionMessage.textContent = "正在自动同步创作画面…";
     const epoch = exhibitionEpoch;
+    const revision = artworkRevision;
+    let failed = false;
     try {
       const exportCanvas = document.createElement("canvas");
       const scale = Math.min(1, 1600 / Math.max(canvas.width, canvas.height));
@@ -1263,7 +1293,12 @@
         blob = dataUrlToFile(data);
       }
       if (blob.size > 1800000) throw new Error("作品超过容量上限，自动同步已暂停");
-      if (data === lastArtworkData) { exhibitionMessage.textContent = "这幅作品已提交成功。"; return; }
+      if (epoch !== exhibitionEpoch) return;
+      if (data === lastArtworkData) {
+        if (revision === artworkRevision) artworkDirty = false;
+        exhibitionMessage.textContent = "创作画面已自动同步。";
+        return;
+      }
       const base = window.MANANA_ARTWORKS_API.replace(/\/$/, "");
       const url = base + "/api/artworks" + (exhibitionId ? "/" + exhibitionId : "");
       const response = await fetch(url, {
@@ -1276,12 +1311,15 @@
       if (epoch !== exhibitionEpoch) return;
       if (!exhibitionId) { exhibitionId = result.id; editToken = result.edit_token; }
       lastArtworkData = data;
-      exhibitionMessage.textContent = "作品已提交成功 · 编号 " + exhibitionId.slice(0, 8);
+      lastSyncAt = Date.now();
+      if (revision === artworkRevision) artworkDirty = false;
+      exhibitionMessage.textContent = "画面已自动同步 · 编号 " + exhibitionId.slice(0, 8);
     } catch (error) {
-      exhibitionMessage.textContent = (error && error.message || "提交失败") + " · 请再次点击提交";
+      failed = true;
+      exhibitionMessage.textContent = (error && error.message || "同步失败") + " · 稍后自动重试";
     } finally {
-      submitInFlight = false;
-      submitExhibitionButton.disabled = false;
+      syncInFlight = false;
+      if (artworkDirty) scheduleArtworkSync(failed ? 30000 : Math.max(3000, lastSyncAt + 30000 - Date.now()));
     }
   }
 
@@ -1462,7 +1500,6 @@
   drawerCloseButton.addEventListener("click", closeDrawer);
   saveImageButton.addEventListener("click", saveArtworkToAlbum);
   postNoteButton.addEventListener("click", postArtworkToXhs);
-  submitExhibitionButton.addEventListener("click", submitExhibitionArtwork);
   saveProjectButton.addEventListener("click", function () { saveProject(true, false); });
   saveNewProjectButton.addEventListener("click", function () { saveProject(true, true); });
   landscapeButton.addEventListener("click", requestLandscapeMode);
@@ -1521,16 +1558,16 @@
   window.addEventListener("orientationchange", scheduleCanvasSetup);
   window.addEventListener("pageshow", scheduleCanvasSetup);
   document.addEventListener("visibilitychange", function () {
+    if (document.hidden && artworkDirty) syncExhibitionArtwork();
     if (!document.hidden) scheduleCanvasSetup();
   });
-  const wind = window.MananaWind.attach({ state, snapshot, localPoint, status: setStatus, started: markStarted, closeDrawer });
+  const wind = window.MananaWind.attach({ state, snapshot, localPoint, status: setStatus, started: markStarted, changed: markArtworkChanged, closeDrawer });
   syncLandscapeMode();
   setupCanvas();
   syncProjectUi();
-  if (!window.MANANA_ARTWORKS_API) exhibitionMessage.textContent = "活动作品库尚未上线；作品暂时只保存在本机。";
-  else {
-    submitExhibitionButton.hidden = false;
-    document.getElementById("welcomeSyncNotice").textContent = "完成创作后，点击“完成并提交作品”上传到活动作品库。";
+  if (!window.MANANA_ARTWORKS_API) {
+    exhibitionMessage.textContent = "活动作品库尚未上线；作品暂时只保存在本机。";
+    document.getElementById("welcomeSyncNotice").textContent = "活动作品库接入中；目前作品只保存在本机。";
   }
   requestAnimationFrame(frame);
 }());

@@ -33,7 +33,7 @@
     works.forEach(async work => {
       const card = document.createElement("button"), img = document.createElement("img"), meta = document.createElement("div"), name = document.createElement("b"), date = document.createElement("small");
       card.className = "card"; img.alt = work.artist || "匿名作品"; img.loading = "lazy";
-      name.textContent = work.artist || "匿名作品"; date.textContent = new Date(work.created_at).toLocaleString("zh-CN") + " · 已打印 " + work.print_count;
+      name.textContent = work.artist || "匿名创作者"; date.textContent = "最近同步 " + new Date(work.updated_at).toLocaleString("zh-CN") + " · 已打印 " + work.print_count;
       meta.append(name, date); card.append(img, meta); gallery.append(card);
       card.addEventListener("click", () => openViewer(work));
       try {
@@ -85,5 +85,5 @@
   });
   if (token) { $("loginPanel").hidden = true; $("dashboard").hidden = false; $("logout").hidden = false; load().catch(error => message(error.message)); }
   else if (!apiBase) message("作品库服务尚未配置，管理员暂时无法登录。");
-  setInterval(function () { if (token && $("viewer").hidden && !document.hidden) load().catch(error => message(error.message)); }, 5000);
+  setInterval(function () { if (token && $("viewer").hidden && !document.hidden) load().catch(error => message(error.message)); }, 120000);
 })();

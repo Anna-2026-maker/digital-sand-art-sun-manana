@@ -181,7 +181,8 @@
       const radius = Math.min(145, Math.max(8, s.size * 2) * settings.radiusFactor) * s.cols / s.width;
       const elapsed = lastTransportAt ? Math.min(80, now - lastTransportAt) : Math.max(40, dt);
       lastTransportAt = now;
-      transport(s.field, s.cols, s.rows, pos.x * (s.cols - 1), pos.y * (s.rows - 1), Number(direction.value) * Math.PI / 180, radius, gust, elapsed, source);
+      const moved = transport(s.field, s.cols, s.rows, pos.x * (s.cols - 1), pos.y * (s.rows - 1), Number(direction.value) * Math.PI / 180, radius, gust, elapsed, source);
+      if (moved > 0 && api.changed) api.changed();
     }
     return { tick, release, busy: () => held || drag !== null };
   }
